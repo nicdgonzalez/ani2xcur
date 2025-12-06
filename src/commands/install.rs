@@ -17,6 +17,9 @@ use crate::package::Package;
 pub struct Install {
     #[clap(long)]
     strict: bool,
+
+    #[clap(long)]
+    skip_broken: bool,
 }
 
 impl Run for Install {
@@ -40,7 +43,11 @@ impl Run for Install {
         let theme_input = package.build().theme().as_path().to_owned();
         let theme_name = config.theme().to_owned();
 
-        Build::new(self.strict).run(ctx)?;
+        let build_result = Build::new(self.strict).run(ctx);
+
+        if !self.skip_broken {
+            build_result?;
+        }
 
         install_theme(&theme_input, &theme_name)?;
         print_install_instructions(&theme_name)?;
