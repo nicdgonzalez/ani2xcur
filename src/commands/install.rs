@@ -71,11 +71,7 @@ fn print_install_instructions(theme_name: &str) -> anyhow::Result<()> {
     let mut stdout = io::stdout();
 
     writeln!(stderr, "{}", "Successfully installed theme!".bold().green())?;
-    writeln!(
-        stderr,
-        "{}",
-        "Use the following command to set the cursor theme:".cyan()
-    )?;
+    writeln!(stderr, "Use the following command to set the cursor theme:")?;
 
     let command = if has_command("gsettings") {
         format!("gsettings set org.gnome.desktop.interface cursor-theme {theme_name:?}")
@@ -84,10 +80,10 @@ fn print_install_instructions(theme_name: &str) -> anyhow::Result<()> {
     } else if has_command("kwriteconfig5") {
         format!("kwriteconfig5 --file kcminputrc --group Mouse --key cursorTheme {theme_name:?}")
     } else {
-        "No known theme-setting command detected.".to_owned()
+        "echo 'failed to set cursor theme: no known theme-setting command detected.'".to_owned()
     };
 
-    writeln!(stdout, "  {}", command.bold())?;
+    writeln!(stdout, "  {}", command.cyan())?;
     Ok(())
 }
 
