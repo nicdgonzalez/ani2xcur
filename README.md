@@ -4,11 +4,11 @@ A command-line tool for converting Windows animated cursors to Linux.
 
 ## Installation
 
-**Dependencies**:
-
-- cargo 1.87.0
-- xcursorgen 1.0.8
-- python 3.13.7
+| Requirements | Version | Reason                       |
+| :----------- | :------ | :--------------------------- |
+| cargo        | 1.87.0  | Build and install the CLI    |
+| xcursorgen   | 1.0.8   | Xcursor generation backend   |
+| python       | 3.13.7  | (Temporary) INF file parsing |
 
 Install from Git using cargo:
 
@@ -16,8 +16,19 @@ Install from Git using cargo:
 cargo install --git https://github.com/nicdgonzalez/ani-to-xcursor
 ```
 
-The INF file parser is implemented in Python, so for now, you will also need to
-install the following Python packages:
+TL;DR
+
+Temporary Python dependencies until the INF parser is re-implemented in Rust.
+
+<details>
+<summary>Read more</summary>
+
+I help maintain a similar project, [win2xcursor], which is implemented in
+Python; the INF file parser is also implemented in Python so I can share it
+between the two projects. Until I re-implement it in Rust, the following Python
+packages are also required.
+
+</details>
 
 ```bash
 python3 -m pip install tomli_w git+https://github.com/nicdgonzalez/inf.git
@@ -31,36 +42,41 @@ From the directory containing the `Install.inf` file, run:
 ani-to-xcursor install
 ```
 
-If you're *really* in a hurry, you can install and set with a single command:
+This:
+
+- Generates `Cursor.toml`
+- Extracts frames from the ANI file
+- Builds the Xcursor theme
+- Installs it onto your system
+- Prints the command required to activate the theme
+
+To install and activate automatically in one go:
+
+> [!NOTE]\
+> Automatic activation is best-tested on GNOME (using `gsettings`). Commands
+> for other Window Managers are defined in [src/commands/install.rs]. Pull
+> requests to improve coverage are welcome!
 
 ```bash
-eval "$(ani-to-xcursor install 2> /dev/null)"
+eval "$(ani-to-xcursor install --skip-broken 2> /dev/null)"
 ```
-
-The `install` command will try to figure out which command you need to set up
-the cursor on your system and outputs it as the last line of stdout; if you
-pipe it into `bash`, it should set the cursor automatically.
-
-I did my best to include as many systems as I could, but I personally use
-GNOME/gsettings, so that one is the only one that I am able to test. The
-commands are found [here](./src/commands/install.rs) if you'd like to open a
-pull request and add/correct the command for your system.
 
 ## Usage
 
-First, `cd` to the directory containing the `Install.inf` file. Then, run the
-`init` command to generate the `Cursor.toml` file:
+From the command line, navigate to the directory containing the `Install.inf`
+file, then run the following command:
 
 ```bash
 ani-to-xcursor init
 ```
 
-> [!NOTE]\
-> If you can't get the command to work, the `Install.inf` is either missing or
-> not formatted correctly. You will have to copy the template
-> [`Cursor.toml`](./Cursor.toml) and fill it out manually.
+This parses `Install.inf` and produces a `Cursor.toml` file.
 
-Then, to generate the cursors:
+> [!NOTE]\
+> If this fails, your `Install.inf` may be missing or malformed. You can
+> manually copy and edit the template: [`Cursor.toml`](./Cursor.toml).
+
+Then, build the cursors:
 
 ```bash
 ani-to-xcursor build
@@ -72,26 +88,30 @@ Finally, install the theme:
 ani-to-xcursor install
 ```
 
-For convenience, the `install` command calls also calls `build`. It is
-separated into two steps in case you want to inspect the build output.
+The three commands are exposed separately so that advanced users can automate
+or override individual steps.
+
+The `install` command will run `init` and `build` automatically if needed.
 
 ## How it works
 
 A cursor package on Windows typically contains a file called `Install.inf`.
-This is how Windows knows how to load the cursors. This project uses the
-information inside of that file to generate the necessary files on Linux.
+This is a configuration file that tells Windows how to load the cursors. This
+project uses that information to generate the necessary files on Linux.
 
-If you are missing the `Install.inf` file or the cursors are not at their
-original paths anymore, I go over how to resolve any issues manually as I walk
-through how to use this tool below.
+This is the first (and as of writing, also the only) ANI to Xcursor project to
+parse the INF file and automate the process from start to finish.
 
-The process has three steps:
+The cursor conversion process has three steps:
 
-1. Initialize the *package* (use `Install.inf` to create `Cursor.toml`)
-1. Build the necessary files (use `Cursor.toml` to create `build`)
-1. Install the theme (`build/theme` -> `$HOME/.local/share/icons/Theme-Name`)
+1. Parse `Install.inf` to generate a `Cursor.toml` file.
+1. Read `Cursor.toml` to produce the `build` directory (containing the
+   extracted frames, xcursorgen configuration files, cursor theme, etc.).
+1. Create a symbolic link from `build/theme` into `$XDG_DATA_HOME/icons`,
+   installing the cursor theme for the current user.
 
-By the end, the directory will look something like this:
+All files are built into the current directory, making it easy to delete and
+undo all changes. The resulting directory structure:
 
 ```
 Theme-Name
@@ -100,16 +120,17 @@ Theme-Name
 │   └── theme
 │       ├── cursors
 │       └── index.theme
-├── [cursors]
-├── Install.inf
 └── Cursor.toml
+├── Install.inf
+├── [...ANI]
 ```
 
-Note the "Theme-Name" at the top; it represents the name you will use to
-activate the cursor theme at the end. It is one level above the `Install.inf`
-file. Before getting started, make sure it doesn't conflict with other theme
-names.
+`Theme-Name` is the name of the directory containing the `Install.inf` file.
+This becomes the final cursor theme name. (You can change this in `Cursor.toml`
+if needed.)
 
-The `[cursors]` subdirectory is in square brackets because it depends on where
-the cursors actually are. Best effort is made to find the cursors, since this
-is the most tedious part of the process!
+As long as the ANI file names match the identifiers listed in `Install.inf`,
+the application will locate and process them automatically. This is the most
+tedious part of the process, so best efforts are made to find these files.
+
+[src/commands/install.rs]: ./src/commands/install.rs
