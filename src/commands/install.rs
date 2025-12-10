@@ -1,7 +1,7 @@
+use std::io;
 use std::io::Write as _;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::{env, io};
 
 use anyhow::Context as _;
 use colored::Colorize;
@@ -11,7 +11,6 @@ use crate::commands::init::Init;
 use crate::commands::Run;
 use crate::config::Config;
 use crate::context::Context;
-use crate::package::Package;
 
 #[derive(Debug, Clone, Default, clap::Args)]
 pub struct Install {
@@ -24,33 +23,24 @@ pub struct Install {
 
 impl Run for Install {
     fn run(&self, ctx: &mut Context) -> anyhow::Result<()> {
-        if ctx.package.is_none() {
-            let current_dir = env::current_dir().context("failed to get current directory")?;
-            ctx.package = Some(Package::new(current_dir));
-        }
-        let package = ctx.package.as_ref().unwrap();
+        let package = &ctx.package;
 
         if !package.config().exists() {
-            Init::new().run(&mut ctx.clone())?;
+            Init::new(None).run(&mut ctx.clone())?;
         }
 
-        if ctx.config.is_none() {
+        let config = ctx.config.get_or_try_init(|| {
             let path = package.config();
-            ctx.config = Some(Config::from_file(&path)?);
-        }
-        let config = ctx.config.as_ref().unwrap();
+            Config::from_file(&path)
+        })?;
 
-        let theme_input = package.build().theme().as_path().to_owned();
-        let theme_name = config.theme().to_owned();
+        Build::new(self.strict, self.skip_broken).run(&mut ctx.clone())?;
 
-        let build_result = Build::new(self.strict).run(ctx);
+        let theme_input = package.build().theme().path();
+        let theme_name = config.theme();
 
-        if !self.skip_broken {
-            build_result?;
-        }
-
-        install_theme(&theme_input, &theme_name)?;
-        print_install_instructions(&theme_name)?;
+        install_theme(theme_input, theme_name)?;
+        print_install_instructions(theme_name)?;
 
         Ok(())
     }
@@ -60,8 +50,10 @@ fn install_theme(theme_input: &Path, theme_name: &str) -> anyhow::Result<()> {
     let mut theme_output = dirs::data_dir().context("failed to get data directory")?;
     theme_output.extend(["icons", theme_name]);
 
-    symlink(theme_input, &theme_output)
-        .with_context(|| format!("failed to create symlink to {}", theme_output.display()))?;
+    if !theme_output.exists() {
+        symlink(theme_input, &theme_output)
+            .with_context(|| format!("failed to create symlink to {}", theme_output.display()))?;
+    }
 
     Ok(())
 }

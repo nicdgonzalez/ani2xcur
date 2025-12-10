@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{self, ErrorKind, Write as _};
 use std::path::Path;
 use std::process::Command;
-use std::{env, fs, iter, path, thread};
+use std::{fs, iter, path, thread};
 
 use ani::de::{Ani, JIFFY};
 use anyhow::{anyhow, Context as _};
@@ -18,33 +18,32 @@ use crate::verbosity::VerbosityLevel;
 
 #[derive(Debug, Clone, Default, clap::Args)]
 pub struct Build {
+    /// Throw an error for ANI files that do not strictly follow the ANI file format.
     #[clap(long)]
     strict: bool,
+
+    /// Ignore cursors that fail to build.
+    #[clap(long)]
+    skip_broken: bool,
 }
 
 impl Build {
-    pub fn new(strict: bool) -> Self {
-        Self { strict }
+    pub fn new(strict: bool, skip_broken: bool) -> Self {
+        Self {
+            strict,
+            skip_broken,
+        }
     }
 }
 
 impl Run for Build {
     fn run(&self, ctx: &mut Context) -> anyhow::Result<()> {
-        let package = if let Some(ref package) = ctx.package {
-            package
-        } else {
-            let current_dir = env::current_dir().context("failed to get current directory")?;
-            ctx.package = Some(Package::new(current_dir));
-            ctx.package.as_ref().unwrap()
-        };
+        let package = &ctx.package;
 
-        let config = if let Some(ref config) = ctx.config {
-            config
-        } else {
+        let config = ctx.config.get_or_try_init(|| {
             let path = package.config();
-            ctx.config = Some(Config::from_file(&path)?);
-            ctx.config.as_ref().unwrap()
-        };
+            Config::from_file(&path)
+        })?;
 
         setup_build_directory(package.build(), config.theme())?;
 
@@ -56,12 +55,12 @@ impl Run for Build {
                 // Attach context so we know which thread is emitting the events.
                 let span = error_span!("", cursor = ?cursor.name());
 
-                let build = package.build().clone();
+                let package = package.clone();
                 let name = cursor.name().to_owned();
                 let strict = self.strict;
 
                 let handle = thread::spawn(move || {
-                    span.in_scope(move || process_cursor(&cursor, &build, strict))
+                    span.in_scope(move || process_cursor(&cursor, &package, strict))
                 });
 
                 (name, handle)
@@ -95,7 +94,7 @@ impl Run for Build {
             }
         }
 
-        if error_count > 0 {
+        if error_count > 0 && !self.skip_broken {
             Err(anyhow!("failed to create ({error_count}) cursors"))
         } else {
             let mut stderr = io::stderr();
@@ -107,16 +106,16 @@ impl Run for Build {
 }
 
 fn setup_build_directory(build: &BuildDir, theme_name: &str) -> anyhow::Result<()> {
-    fs::create_dir_all(build.as_path()).context("failed to create build directory")?;
-    info!("created directory: {:#}", build.as_path().display());
+    fs::create_dir_all(build.path()).context("failed to create build directory")?;
+    info!("created directory: {:#}", build.path().display());
 
     let frames = build.frames();
     fs::create_dir_all(&frames).context("failed to create frames directory")?;
     info!("created directory: {:#}", frames.display());
 
     let theme = build.theme();
-    fs::create_dir_all(theme.as_path()).context("failed to create theme directory")?;
-    info!("created directory: {:#}", theme.as_path().display());
+    fs::create_dir_all(theme.path()).context("failed to create theme directory")?;
+    info!("created directory: {:#}", theme.path().display());
 
     let cursors = theme.cursors();
     fs::create_dir_all(&cursors).context("failed to create theme directory")?;
@@ -134,8 +133,9 @@ fn setup_build_directory(build: &BuildDir, theme_name: &str) -> anyhow::Result<(
     Ok(())
 }
 
-fn process_cursor(cursor: &Cursor, build: &BuildDir, strict: bool) -> anyhow::Result<()> {
-    let path = path::absolute(cursor.input()).context("failed to resolve cursor input path")?;
+fn process_cursor(cursor: &Cursor, package: &Package, strict: bool) -> anyhow::Result<()> {
+    let path = path::absolute(package.path().join(cursor.input()))
+        .context("failed to resolve cursor input path")?;
     let ani = Ani::open(&path, strict).context("failed to decode ANI file")?;
 
     let file_stem = path
@@ -143,6 +143,7 @@ fn process_cursor(cursor: &Cursor, build: &BuildDir, strict: bool) -> anyhow::Re
         .and_then(|stem| stem.to_str())
         .context("expected path to be valid unicode")?;
 
+    let build = package.build();
     let mut frames_dir = build.frames();
     frames_dir.push(file_stem);
     let frames_dir = frames_dir;
@@ -214,7 +215,6 @@ fn build_xcursor_config(
         ToOwned::to_owned,
     );
 
-    // TODO: Calculate the required capacity and pre-allocate.
     let mut contents = String::new();
 
     // TODO: Sort the entries by size.
@@ -284,7 +284,12 @@ fn link_to_theme(
     target: &Path,
 ) -> anyhow::Result<()> {
     let target_link = theme_cursors_dir.join(cursor_name);
-    symlink(target, &target_link)?;
+
+    // TODO: Remove todo when `symlink()` doesn't use `fs::remove_file` --
+    // Path.exists() is weird about symbolic links... investigate reasons why this is failing.
+    if !target_link.exists() {
+        symlink(target, &target_link)?;
+    }
 
     for alias in aliases {
         let alias_link = theme_cursors_dir.join(alias);

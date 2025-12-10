@@ -18,7 +18,7 @@ python3 ./main.py --input /path/to/Install.inf
 ```
 
 The generated TOML configuration will be output to stdout, which you can
-capture or redirect into a file. Enjoy!
+capture or redirect into a file.
 
 """
 
@@ -52,8 +52,8 @@ class Cursors(NamedTuple):
     move: str  # SizeAll [12]
     alternate: str  # UpArrow [13]
     link: str  # Hand [14]
-    pin: str  # Location(?) [15]  I don't think Linux uses this one.
-    person: str  # Person(?) [16]  I don't think Linux uses this one.
+    pin: str | None = None  # Location(?) [15]  I don't think Linux uses this one.
+    person: str | None = None  # Person(?) [16]  I don't think Linux uses this one.
 
 
 def setup_parser() -> argparse.ArgumentParser:
@@ -83,6 +83,12 @@ def setup_parser() -> argparse.ArgumentParser:
         required=True,
         help="Path to Install.inf file",
     )
+    parser.add_argument(
+        "--name",
+        type=str,
+        required=False,
+        help="Name to use for the cursor theme.",
+    )
     return parser
 
 
@@ -108,12 +114,38 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
 
     input: pathlib.Path = args.input.absolute()
 
-    with open(input, "r") as f:
+    if input.exists():
+        install_inf = input
+    else:
+        install_inf: pathlib.Path | None = None
+        parent = input.parent
+
+        for pattern in ("Install.inf", "install.inf", "*.inf"):
+            matches = parent.glob(pattern)
+
+            try:
+                install_inf = next(matches)
+            except StopIteration:
+                install_inf = None
+            else:
+                if not install_inf.exists():
+                    install_inf = None
+
+        # If after checking all of our fallback names we still can't find it,
+        # set the file to to the original input and use that to throw an error.
+        if install_inf is None:
+            install_inf = input
+
+    with open(install_inf, "r") as f:
         buffer = f.read()
         document = inf.load(buffer)
 
     cursors = extract_cursors(document)
-    config = create_config(theme_name=input.parent.name, cursors=cursors)
+    config = create_config(
+        theme_name=args.name or input.parent.name,
+        cursors=cursors,
+        cwd=input.parent,
+    )
 
     config["cursor"] = [c for c in config["cursor"] if c["input"] != ""]
 
@@ -123,15 +155,17 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     return 0
 
 
-def create_config(theme_name: str, cursors: Cursors) -> dict[str, Any]:
-    cwd = pathlib.Path.cwd()
+def create_config(
+    theme_name: str,
+    cursors: Cursors,
+    cwd: pathlib.Path,
+) -> dict[str, Any]:
+    file_name = cursors.default.split("/")[-1]
 
     try:
-        file_name = cursors.default.split("/")[-1]
         cursor_file = next(cwd.rglob(file_name))
     except StopIteration:
-        # If we can't find the file, use the path provided by the Install file.
-        cursor_dir = cursor_file.parent
+        cursor_dir = pathlib.Path(file_name).parent
     else:
         cursor_dir = cursor_file.parent
 
@@ -286,11 +320,14 @@ def create_config(theme_name: str, cursors: Cursors) -> dict[str, Any]:
 
 
 def as_input_impl(
-    cursor: str,
+    cursor: str | None,
     *,
     cursor_dir: pathlib.Path,
     cwd: pathlib.Path,
 ) -> str:
+    if cursor is None:
+        return ""
+
     file = pathlib.Path(cursor)
     file = cursor_dir.joinpath(file.name)
     file_str = file.as_posix().replace(cwd.as_posix(), "")

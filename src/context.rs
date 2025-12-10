@@ -1,16 +1,22 @@
+use std::cell::OnceCell;
+
 use crate::config::Config;
 use crate::package::Package;
 use crate::verbosity::VerbosityLevel;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Context {
-    pub config: Option<Config>,
-    pub package: Option<Package>,
+    pub config: OnceCell<Config>,
+    pub package: Package,
     pub level: VerbosityLevel,
 }
 
 impl Context {
-    pub fn with_level(self, level: VerbosityLevel) -> Self {
-        Self { level, ..self }
+    pub fn new(package: Package, level: VerbosityLevel) -> Self {
+        Self {
+            config: OnceCell::new(),
+            package,
+            level,
+        }
     }
 }

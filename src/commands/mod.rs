@@ -10,10 +10,10 @@ pub trait Run {
 
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
-    /// Generate the `Cursor.toml` configuration file from the current directory.
+    /// Generate the `Cursor.toml` configuration file
     Init(init::Init),
 
-    /// Generate the custom cursor theme.
+    /// Create the cursor theme
     Build(build::Build),
 
     /// Symlink the cursor theme to `$HOME/.local/share/icons`.

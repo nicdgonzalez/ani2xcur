@@ -36,10 +36,18 @@ python3 -m pip install tomli_w git+https://github.com/nicdgonzalez/inf.git
 
 ## Quickstart
 
+> [!TIP]\
+> Need a cursor to start with? Try NOiiRE's [Hornet Cursor] from Hollow Knight:
+> Silksong.
+
 From the directory containing the `Install.inf` file, run:
 
 ```bash
 ani-to-xcursor install
+
+# Or, pass the path to the target directory via `--directory`:
+# NOTE: This flag is available for all of the subcommands.
+ani-to-xcursor install --directory /path/to/target/directory
 ```
 
 This:
@@ -55,7 +63,7 @@ To install and activate automatically in one go:
 > [!NOTE]\
 > Automatic activation is best-tested on GNOME (using `gsettings`). Commands
 > for other Window Managers are defined in [src/commands/install.rs]. Pull
-> requests to improve coverage are welcome!
+> requests to improve coverage are always welcome!
 
 ```bash
 eval "$(ani-to-xcursor install --skip-broken 2> /dev/null)"
@@ -73,8 +81,8 @@ ani-to-xcursor init
 This parses `Install.inf` and produces a `Cursor.toml` file.
 
 > [!NOTE]\
-> If this fails, your `Install.inf` may be missing or malformed. You can
-> manually copy and edit the template: [`Cursor.toml`](./Cursor.toml).
+> If this fails, a template [`Cursor.toml`](./Cursor.toml) file will be created
+> instead. You'll have to manually update the file names to match your cursors.
 
 Then, build the cursors:
 
@@ -91,7 +99,7 @@ ani-to-xcursor install
 The three commands are exposed separately so that advanced users can automate
 or override individual steps.
 
-The `install` command will run `init` and `build` automatically if needed.
+The `install` command will run all previous commands automatically if needed.
 
 ## How it works
 
@@ -133,4 +141,6 @@ As long as the ANI file names match the identifiers listed in `Install.inf`,
 the application will locate and process them automatically. This is the most
 tedious part of the process, so best efforts are made to find these files.
 
+[hornet cursor]: https://ko-fi.com/s/2e08ca3a58
 [src/commands/install.rs]: ./src/commands/install.rs
+[win2xcursor]: https://github.com/eltaters/win2xcursor

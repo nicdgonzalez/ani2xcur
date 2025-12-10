@@ -12,6 +12,10 @@ impl Package {
         Self { path, build }
     }
 
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn config(&self) -> PathBuf {
         self.path.join("Cursor.toml")
     }
@@ -34,7 +38,7 @@ impl Build {
         Self { path, theme }
     }
 
-    pub fn as_path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 
@@ -57,7 +61,7 @@ impl Theme {
         Self { path }
     }
 
-    pub fn as_path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 

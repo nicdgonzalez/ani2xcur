@@ -1,5 +1,6 @@
 //! The main entry point to the application.
 
+#![feature(once_cell_try)]
 #![warn(
     clippy::correctness,
     clippy::suspicious,
@@ -16,14 +17,17 @@ mod package;
 mod verbosity;
 
 use std::io::Write as _;
+use std::path::PathBuf;
 use std::process::ExitCode;
 use std::{env, io, panic};
 
+use anyhow::Context as _;
 use clap::Parser as _;
 use colored::Colorize as _;
 use tracing_subscriber::EnvFilter;
 
 use crate::context::Context;
+use crate::package::Package;
 use crate::verbosity::{Verbosity, VerbosityLevel};
 
 #[derive(Debug, clap::Parser)]
@@ -38,6 +42,9 @@ struct Parser {
 
     #[clap(flatten)]
     verbosity: Verbosity,
+
+    #[clap(long, short = 'C', global = true)]
+    directory: Option<PathBuf>,
 }
 
 fn main() -> ExitCode {
@@ -60,8 +67,14 @@ fn try_main() -> anyhow::Result<ExitCode> {
     let level = args.verbosity.level();
     setup_tracing(level);
 
-    let mut ctx = Context::default();
-    ctx = ctx.with_level(level);
+    let path = if let Some(path) = args.directory {
+        path
+    } else {
+        env::current_dir().context("failed to get current directory")?
+    };
+
+    let package = Package::new(path);
+    let mut ctx = Context::new(package, level);
     args.subcommand.run(&mut ctx).map(|()| ExitCode::SUCCESS)
 }
 
