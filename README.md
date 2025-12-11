@@ -13,7 +13,13 @@ A command-line tool for converting Windows animated cursors to Linux.
 Install from Git using cargo:
 
 ```bash
-cargo install --git https://github.com/nicdgonzalez/ani-to-xcursor
+cargo +nightly install --git https://github.com/nicdgonzalez/ani-to-xcursor
+```
+
+If you don't have `nightly` installed, you can use rustup to get it:
+
+```bash
+rustup toolchain install nightly
 ```
 
 TL;DR
