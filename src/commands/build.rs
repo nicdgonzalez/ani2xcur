@@ -6,7 +6,7 @@ use std::process::Command;
 use std::{fs, iter, path, thread};
 
 use ani::de::{Ani, JIFFY};
-use anyhow::{anyhow, Context as _};
+use anyhow::{Context as _, anyhow};
 use colored::Colorize as _;
 use tracing::{error, error_span, info};
 
@@ -41,7 +41,7 @@ impl Run for Build {
         let package = &ctx.package;
 
         let config = ctx.config.get_or_try_init(|| {
-            let path = package.config();
+            let path = package.manifest();
             Config::from_file(&path)
         })?;
 
@@ -134,7 +134,7 @@ fn setup_build_directory(build: &BuildDir, theme_name: &str) -> anyhow::Result<(
 }
 
 fn process_cursor(cursor: &Cursor, package: &Package, strict: bool) -> anyhow::Result<()> {
-    let path = path::absolute(package.path().join(cursor.input()))
+    let path = path::absolute(package.as_path().join(cursor.input()))
         .context("failed to resolve cursor input path")?;
     let ani = Ani::open(&path, strict).context("failed to decode ANI file")?;
 

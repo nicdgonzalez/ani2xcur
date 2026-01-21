@@ -21,6 +21,11 @@ impl FromStr for Config {
 }
 
 impl Config {
+    #[must_use]
+    pub fn new(theme: String, cursors: Vec<Cursor>) -> Self {
+        Self { theme, cursors }
+    }
+
     pub fn from_file(path: &Path) -> anyhow::Result<Self> {
         let contents = fs::read_to_string(path).context("failed to read configuration file")?;
         contents.parse()
@@ -46,6 +51,14 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    pub fn new(name: String, aliases: Vec<String>, input: PathBuf) -> Self {
+        Self {
+            name,
+            aliases,
+            input,
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }

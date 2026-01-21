@@ -36,13 +36,14 @@ dependencies = [
 
 [[package]]
 name = "ani-to-xcursor"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "ani",
  "anyhow",
  "clap",
  "colored",
  "dirs",
+ "inf",
  "serde",
  "toml",
  "tracing",
@@ -317,6 +318,11 @@ dependencies = [
  "equivalent",
  "hashbrown",
 ]
+
+[[package]]
+name = "inf"
+version = "0.1.0"
+source = "git+https://github.com/nicdgonzalez/inf#0a34524d80a3f3ae3ecd757b6cd3ddb750eb37f6"
 
 [[package]]
 name = "is_terminal_polyfill"

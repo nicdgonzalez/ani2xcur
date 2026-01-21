@@ -12,11 +12,11 @@ impl Package {
         Self { path, build }
     }
 
-    pub fn path(&self) -> &Path {
+    pub fn as_path(&self) -> &Path {
         &self.path
     }
 
-    pub fn config(&self) -> PathBuf {
+    pub fn manifest(&self) -> PathBuf {
         self.path.join("Cursor.toml")
     }
 

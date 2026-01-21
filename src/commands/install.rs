@@ -4,11 +4,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use anyhow::Context as _;
-use colored::Colorize;
+use colored::Colorize as _;
 
-use crate::commands::build::{symlink, Build};
-use crate::commands::init::Init;
 use crate::commands::Run;
+use crate::commands::build::{Build, symlink};
+use crate::commands::init::Init;
 use crate::config::Config;
 use crate::context::Context;
 
@@ -25,12 +25,12 @@ impl Run for Install {
     fn run(&self, ctx: &mut Context) -> anyhow::Result<()> {
         let package = &ctx.package;
 
-        if !package.config().exists() {
-            Init::new(None).run(&mut ctx.clone())?;
+        if !package.manifest().exists() {
+            Init::default().run(&mut ctx.clone())?;
         }
 
         let config = ctx.config.get_or_try_init(|| {
-            let path = package.config();
+            let path = package.manifest();
             Config::from_file(&path)
         })?;
 

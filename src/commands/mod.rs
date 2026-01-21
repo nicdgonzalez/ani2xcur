@@ -31,3 +31,8 @@ impl Subcommand {
         handler.run(ctx)
     }
 }
+
+pub mod prelude {
+    pub use super::Run;
+    pub use crate::context::Context;
+}
