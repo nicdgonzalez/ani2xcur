@@ -306,14 +306,16 @@ fn link_to_theme(
 }
 
 pub fn symlink(source: &Path, target: &Path) -> anyhow::Result<()> {
-    match fs::remove_file(target) {
-        Ok(()) => {}
-        Err(err) => match err.kind() {
+    if let Err(err) = fs::remove_file(target) {
+        match err.kind() {
             ErrorKind::NotFound => {}
             _ => return Err(err).context("failed to remove existing file")?,
-        },
+        }
     }
 
+    // TODO: If a different thread creates the file after the check, but before this command runs,
+    // then we get a race condition. Give aliases less priority than actual cursors, deleting the
+    // alias (or running `ln` with `--force`) if the file should have higher priority.
     let status = Command::new("ln")
         .args([
             "--symbolic",

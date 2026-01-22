@@ -36,7 +36,7 @@ dependencies = [
 
 [[package]]
 name = "ani-to-xcursor"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "ani",
  "anyhow",
@@ -322,7 +322,7 @@ dependencies = [
 [[package]]
 name = "inf"
 version = "0.1.0"
-source = "git+https://github.com/nicdgonzalez/inf#0a34524d80a3f3ae3ecd757b6cd3ddb750eb37f6"
+source = "git+https://github.com/nicdgonzalez/inf.git#f0d7d3cb0b16f75426b42c2a2b08484d99ba7c9f"
 
 [[package]]
 name = "is_terminal_polyfill"
