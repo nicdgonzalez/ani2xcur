@@ -1,0 +1,22 @@
+[package]
+name = "ani2xcur"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ani = { git = "https://github.com/nicdgonzalez/ani.git", version = "0.1.0" }
+anyhow = "1.0.100"
+clap = { version = "4.5.54", features = ["derive"] }
+clap-verbosity-flag = { version = "3.0.4", default-features = false, features = [
+    "tracing",
+] }
+colored = "3.0.0"
+dirs = "6.0.0"
+inf = { version = "0.1.0", git = "https://github.com/nicdgonzalez/inf.git" }
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9.11"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
+
+[profile.release]
+debug = true
