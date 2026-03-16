@@ -1,5 +1,9 @@
 # ani2xcur
 
+> [!NOTE]\
+> This project recieved a full rewrite and was renamed from `ani-to-xcursor` to
+> `ani2xcur` on March 10, 2026.
+
 A command-line tool for installing Windows animated cursor schemes on Unix-like
 operating systems running the [X Window System].
 
@@ -41,6 +45,10 @@ Or, download a pre-built binary from the [Releases] page on GitHub.
 
 ## Quickstart
 
+> [!TIP]\
+> Need a cursor to start with? Try NOiiRE's [Hornet Cursor] from Hollow Knight:
+> Silksong.
+
 From the directory containing the `Install.inf` file, run:
 
 ```bash
@@ -48,10 +56,6 @@ ani2xcur install --default-init
 ```
 
 ## Usage
-
-> [!TIP]\
-> Need a cursor to start with? Try NOiiRE's [Hornet Cursor] from Hollow Knight:
-> Silksong.
 
 From the directory containing the `Install.inf` file, run:
 
@@ -116,6 +120,7 @@ ani2xcur convert Default.ani
 - [ ] Automatically scale cursors to standard sizes.
 - [ ] Remove `xcursorgen` dependency.
 - [ ] Remove need for `build` directory for the `convert` subcommand.
+- [ ] Interactive mode to convert individual cursors with Linux remappings.
 
 [ani file format]: https://en.wikipedia.org/wiki/ANI_(file_format)
 [hornet cursor]: https://ko-fi.com/s/2e08ca3a58
