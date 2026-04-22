@@ -25,8 +25,9 @@ While many larger projects now parse INF files to perform bulk cursor
 conversions, this project was the first to introduce that approach.
 
 Originally created to fill that gap, it now focuses on providing an ergonomic
-solution: a single command-line interface with intentionally designed
-subcommands, optimized for speed and correctness.
+solution: a single command-line interface with intentionally designed options
+and subcommands, optimized for speed and correctness. See
+[Benchmarks](#Benchmarks) for comparisons against similar projects.
 
 ## Installation
 
@@ -98,12 +99,24 @@ Enjoy!
 
 ### Convert individual ANI files
 
+> [!NOTE]\
+> Do NOT use this command if you are converting a cursor theme that does not
+> have an INF file. Instead, use the `--skip-inf` flag on the `init` command to
+> create a generic manifest that can be manually edited. This way, you can
+> still use the `build` and `install` commands which do a lot of the heavy
+> lifting.
+>
+> ```bash
+> ani2xcur init --skip-inf
+> ```
+
 If you only want to convert a single ANI file:
 
-> [!NOTE]\
+> [!TIP]\
 > This will output everything into a dedicated `build` directory like the
 > `build` command does. I would recommend moving your ANI files into a separate
-> directory prior to running this command.
+> directory prior to running this command. (This step won't be necessary in a
+> future update.)
 >
 > ```bash
 > mkdir custom-theme
