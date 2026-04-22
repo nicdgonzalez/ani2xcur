@@ -1,6 +1,7 @@
 mod build;
 mod convert;
 mod init;
+mod inspect;
 mod install;
 mod uninstall;
 
@@ -26,6 +27,9 @@ pub enum Subcommand {
 
     /// Delete the theme and all of its build artifacts
     Uninstall(uninstall::Uninstall),
+
+    /// Read contents of an ANI file
+    Inspect(inspect::Inspect),
 }
 
 impl Subcommand {
@@ -36,6 +40,7 @@ impl Subcommand {
             Self::Build(inner) => inner.run(ctx),
             Self::Install(inner) => inner.run(ctx),
             Self::Uninstall(inner) => inner.run(ctx),
+            Self::Inspect(inner) => inner.run(ctx),
         }
     }
 }

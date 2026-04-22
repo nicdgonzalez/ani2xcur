@@ -10,8 +10,8 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
 name = "ani"
-version = "0.1.0"
-source = "git+https://github.com/nicdgonzalez/ani.git#992fc62a8a6a1884f807c0652a5d74d986961e2f"
+version = "0.1.2"
+source = "git+https://github.com/nicdgonzalez/ani.git#0b2a0f6f0fb144200f8cf47b50be9a9a07f698e7"
 dependencies = [
  "bitflags 2.11.0",
  "ico",
@@ -24,6 +24,7 @@ version = "0.1.0"
 dependencies = [
  "ani",
  "anyhow",
+ "bytesize",
  "clap",
  "clap-verbosity-flag",
  "colored",
@@ -108,6 +109,12 @@ name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
+
+[[package]]
+name = "bytesize"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bd91ee7b2422bcb158d90ef4d14f75ef67f340943fc4149891dcce8f8b972a3"
 
 [[package]]
 name = "cfg-if"

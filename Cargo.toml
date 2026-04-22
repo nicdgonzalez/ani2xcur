@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ani = { git = "https://github.com/nicdgonzalez/ani.git", version = "0.1.0" }
+ani = { git = "https://github.com/nicdgonzalez/ani.git", version = "0.1.2" }
 anyhow = "1.0.100"
+bytesize = "2.3.1"
 clap = { version = "4.5.54", features = ["derive"] }
 clap-verbosity-flag = { version = "3.0.4", default-features = false, features = [
     "tracing",
