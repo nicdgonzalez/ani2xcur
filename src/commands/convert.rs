@@ -4,7 +4,7 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use ani::{Ani, Image, JIFFY};
+use ani::{Ani, Image};
 use anyhow::Context as _;
 use colored::Colorize as _;
 
@@ -72,7 +72,7 @@ pub(crate) fn convert_cursor(input: &Path, package: &Package) -> anyhow::Result<
 
     let frames = extract_frames(ani.frames(), &output_dir).collect::<Vec<_>>();
 
-    // Save frames to the file system
+    // Save frames to the file system for xcursorgen to reference.
     debug_assert!(output_dir.try_exists().is_ok_and(|exists| exists));
 
     for frame in &frames {
@@ -169,8 +169,7 @@ fn get_xcursorgen_entries(
             let rate = *rates
                 .get(index)
                 .with_context(|| format!("rate not found at index {index}"))?;
-            // TODO: It would be more accurate to multiply as f32s and then convert to u64 after.
-            let duration = u64::from(JIFFY.round() as u32) * u64::from(rate);
+            let duration = u64::from(rate) * 1000 / 60; // ms
 
             entries.push(XcursorEntry {
                 size,
