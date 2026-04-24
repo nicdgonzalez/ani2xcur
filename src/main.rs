@@ -34,7 +34,7 @@ pub struct Parser {
     subcommand: commands::Subcommand,
 
     /// Change to the specified directory prior to running the command.
-    #[clap(long, global = true)]
+    #[clap(long, short = 'C', global = true)]
     directory: Option<PathBuf>,
 
     #[clap(flatten)]

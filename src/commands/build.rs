@@ -9,7 +9,7 @@ use tracing::error_span;
 
 use crate::commands::convert::convert_cursor;
 use crate::commands::prelude::*;
-use crate::config::{Config, Cursor};
+use crate::config::{Config, Cursor, Size};
 use crate::package::Package;
 
 #[derive(Debug, Default, clap::Args)]
@@ -31,6 +31,8 @@ impl Run for Build {
             .create_all(config.theme())
             .context("failed to create output directory")?;
 
+        let sizes = config.sizes().to_owned();
+
         let handles = config
             .cursors()
             .to_owned()
@@ -41,9 +43,11 @@ impl Run for Build {
 
                 let name = cursor.name().to_owned(); // For better error reporting
                 let package = ctx.package.clone();
+                let sizes = sizes.clone();
 
-                let handle =
-                    thread::spawn(move || span.in_scope(move || handler(&cursor, &package)));
+                let handle = thread::spawn(move || {
+                    span.in_scope(move || handler(&cursor, &package, &sizes))
+                });
 
                 (name, handle)
             })
@@ -80,10 +84,10 @@ impl Run for Build {
     }
 }
 
-fn handler(cursor: &Cursor, package: &Package) -> anyhow::Result<()> {
+fn handler(cursor: &Cursor, package: &Package, sizes: &[Size]) -> anyhow::Result<()> {
     // Convert from ANI to Xcursor
     let input = package.as_path().join(cursor.input());
-    let xcursor = convert_cursor(&input, package).context("failed to create Xcursor")?;
+    let xcursor = convert_cursor(&input, package, sizes).context("failed to create Xcursor")?;
 
     // Link Xcursor to the theme
     let cursors_dir = package.build().theme().cursors();

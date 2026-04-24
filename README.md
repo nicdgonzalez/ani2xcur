@@ -63,6 +63,10 @@ From the directory containing the `Install.inf` file, run:
 > [!TIP]\
 > If your INF file has a different name, use the `--inf` flag instead of
 > renaming the existing file.
+>
+> ```bash
+> ani2xcur init --inf Other.inf
+> ```
 
 ```bash
 ani2xcur init
@@ -152,7 +156,7 @@ hyperfine \
 
 ## Roadmap
 
-- [ ] Automatically scale cursors to standard sizes.
+- [x] Automatically scale cursors to standard sizes.
 - [ ] Remove `xcursorgen` dependency.
 - [ ] Remove need for `build` directory for the `convert` subcommand.
 - [ ] Interactive mode to convert individual cursors with Linux remappings.

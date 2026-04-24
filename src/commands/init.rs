@@ -8,7 +8,7 @@ use inf::{Entry, Inf, Section, Value};
 use tracing::info;
 
 use crate::commands::prelude::*;
-use crate::config::{Config, Cursor};
+use crate::config::{Config, Cursor, Size};
 use crate::cursors::{CURSORS, DEFAULT_FILE_NAMES};
 
 #[derive(Debug, Default, clap::Args)]
@@ -20,6 +20,9 @@ pub struct Init {
     /// Path to INF file. Defaults to `./Install.inf`.
     #[arg(long)]
     pub inf: Option<PathBuf>,
+
+    #[arg(long, value_delimiter = ',', default_value = "32,48,64,96")]
+    pub sizes: Vec<Size>,
 
     /// Overwrite existing Cursor.toml file if it already exists.
     #[arg(long)]
@@ -41,9 +44,9 @@ impl Run for Init {
         }
 
         let config = if self.skip_inf {
-            create_manifest_default(self.theme.as_deref())
+            create_manifest_default(self.theme.as_deref(), self.sizes)
         } else {
-            create_manifest(self.theme, ctx.package.as_path(), self.inf)?
+            create_manifest(self.theme, self.sizes, ctx.package.as_path(), self.inf)?
         };
 
         save_config(&config, &manifest_path)?;
@@ -55,7 +58,7 @@ impl Run for Init {
     }
 }
 
-fn create_manifest_default(theme: Option<&str>) -> Config {
+fn create_manifest_default(theme: Option<&str>, sizes: Vec<Size>) -> Config {
     let theme = theme.unwrap_or("Unnamed Theme").to_owned();
     let cursors = DEFAULT_FILE_NAMES
         .iter()
@@ -68,11 +71,12 @@ fn create_manifest_default(theme: Option<&str>) -> Config {
         })
         .collect::<Vec<_>>();
 
-    Config::new(theme, cursors)
+    Config::new(theme, sizes, cursors)
 }
 
 fn create_manifest(
     theme: Option<String>,
+    sizes: Vec<Size>,
     current_dir: &Path,
     inf: Option<PathBuf>,
 ) -> anyhow::Result<Config> {
@@ -83,13 +87,17 @@ fn create_manifest(
 
     let mut reader = fs::File::open(path).context("failed to open INF file")?;
     let inf = Inf::from_reader(&mut reader).context("failed to parse INF file")?;
-    let config = build_config(&inf, theme)?;
+    let config = build_config(&inf, theme, sizes)?;
 
     Ok(config)
 }
 
 /// Read from the INF data to construct the Cursor.toml configuration.
-fn build_config(inf: &Inf, theme_override: Option<String>) -> anyhow::Result<Config> {
+fn build_config(
+    inf: &Inf,
+    theme_override: Option<String>,
+    sizes: Vec<Size>,
+) -> anyhow::Result<Config> {
     let strings = inf
         .get("Strings")
         .context("expected 'Strings' section in INF")?;
@@ -107,7 +115,7 @@ fn build_config(inf: &Inf, theme_override: Option<String>) -> anyhow::Result<Con
     let theme = resolve_cursor_theme(values, strings, theme_override)?;
     let cursors = get_cursors(&cursor_files).collect();
 
-    Ok(Config::new(theme, cursors))
+    Ok(Config::new(theme, sizes, cursors))
 }
 
 /// Search for the `AddReg` entry in `section` and return the section name(s) referenced in it's

@@ -7,7 +7,7 @@ use colored::Colorize;
 use crate::commands::build::{Build, symlink};
 use crate::commands::init::Init;
 use crate::commands::prelude::*;
-use crate::config::Config;
+use crate::config::{Config, default_sizes};
 
 #[derive(Debug, Default, clap::Args)]
 pub struct Install {
@@ -22,7 +22,11 @@ impl Run for Install {
 
         if !manifest_path.exists() {
             if self.default_init {
-                Init::default().run(ctx)?;
+                Init {
+                    sizes: default_sizes(),
+                    ..Default::default()
+                }
+                .run(ctx)?;
                 assert!(manifest_path.exists());
             } else {
                 anyhow::bail!("Cursor.toml not found; try running the `init` command first");

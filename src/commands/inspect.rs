@@ -7,7 +7,7 @@ use std::time::Duration;
 use ani::{Ani, Flag};
 use anyhow::Context as _;
 use bytesize::ByteSize;
-use colored::{ColoredString, Colorize as _};
+use colored::Colorize as _;
 
 use crate::commands::prelude::*;
 
@@ -83,23 +83,13 @@ fn diagnostics(ani: &Ani) -> String {
     if ani.rates().is_some() {
         writeln!(buffer, "{}", "✔ Found 'rate' chunk".green()).ok();
     } else {
-        writeln!(
-            buffer,
-            "{}",
-            "⚠ Missing 'rate' chunk (using default rate)".yellow()
-        )
-        .ok();
+        writeln!(buffer, "{}", "⚠ Missing 'rate' chunk (optional)".yellow()).ok();
     }
 
     if ani.sequence().is_some() {
         writeln!(buffer, "{}", "✔ Found 'seq ' chunk".green()).ok();
     } else {
-        writeln!(
-            buffer,
-            "{}",
-            "⚠ Missing 'seq ' chunk (looping animation; 1-2-3-2-1)".yellow()
-        )
-        .ok();
+        writeln!(buffer, "{}", "⚠ Missing 'seq ' chunk (optional)".yellow()).ok();
     }
 
     if ani.header().frames() == u32::try_from(ani.frames().len()).unwrap() {
@@ -131,14 +121,6 @@ fn diagnostics(ani: &Ani) -> String {
     buffer
 }
 
-fn has_flag(flags: &Flag, target: Flag) -> ColoredString {
-    if flags.contains(target) {
-        "true".green()
-    } else {
-        "false".red()
-    }
-}
-
 fn header(ani: &Ani) -> String {
     let mut buffer = String::new();
 
@@ -148,13 +130,21 @@ fn header(ani: &Ani) -> String {
     let rate = Duration::from_millis(u64::from(header.jif_rate() * 1000 / 60));
     let flags = header.flags();
 
+    let has_flag = |other| {
+        if flags.contains(other) {
+            "true".green()
+        } else {
+            "false".red()
+        }
+    };
+
     writeln!(buffer, "{}", "Header information".bold().underline()).ok();
     writeln!(buffer, "Frames: {frames}").ok();
     writeln!(buffer, "Steps: {steps}").ok();
     writeln!(buffer, "Default rate: {rate:?}").ok();
     writeln!(buffer, "Flags:").ok();
-    writeln!(buffer, "- AF_ICON: {}", has_flag(flags, Flag::ICON)).ok();
-    writeln!(buffer, "- AF_SEQUENCE: {}", has_flag(flags, Flag::SEQUENCE)).ok();
+    writeln!(buffer, "- AF_ICON: {}", has_flag(Flag::ICON)).ok();
+    writeln!(buffer, "- AF_SEQUENCE: {}", has_flag(Flag::SEQUENCE)).ok();
 
     buffer
 }
@@ -165,7 +155,7 @@ fn frames(ani: &Ani) -> String {
     writeln!(buffer, "{}", "Frames".bold().underline()).ok();
 
     for (i, frame) in ani.frames().iter().enumerate() {
-        writeln!(buffer, "- Frame {i}").ok();
+        writeln!(buffer, "Frame {i}").ok();
 
         for (j, image) in frame.iter().enumerate() {
             let j = j + 1; // Start counting from 1.
@@ -196,7 +186,7 @@ fn animation(ani: &Ani) -> anyhow::Result<String> {
             .with_context(|| format!("rate not found at index {index}"))?;
         let duration = Duration::from_millis(u64::from(*rate) * 1000 / 60);
 
-        writeln!(buffer, "{step:>2}: Frame #{frame} ({duration:?})").ok();
+        writeln!(buffer, "{step:>2}: Frame {frame} ({duration:?})").ok();
     }
 
     writeln!(buffer).ok();

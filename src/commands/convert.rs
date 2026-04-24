@@ -7,13 +7,18 @@ use std::process::Command;
 use ani::{Ani, Image};
 use anyhow::Context as _;
 use colored::Colorize as _;
+use image::imageops::FilterType;
 
 use crate::commands::prelude::*;
+use crate::config::Size;
 use crate::package::Package;
 
 #[derive(Debug, Default, clap::Args)]
 pub struct Convert {
-    input: PathBuf,
+    pub input: PathBuf,
+
+    #[arg(long, value_delimiter = ',', default_value = "32,48,64,96")]
+    pub sizes: Vec<Size>,
 }
 
 struct Extracted<'a> {
@@ -32,7 +37,8 @@ struct XcursorEntry {
 impl Run for Convert {
     fn run(self, ctx: &mut Context) -> anyhow::Result<()> {
         let path = ctx.package.as_path().join(&self.input);
-        let xcursor = convert_cursor(&path, &ctx.package).context("failed to create Xcursor")?;
+        let xcursor =
+            convert_cursor(&path, &ctx.package, &self.sizes).context("failed to create Xcursor")?;
 
         writeln!(
             io::stderr(),
@@ -49,7 +55,11 @@ impl Run for Convert {
 // TODO: Figure out a way to decouple some of this code - This function is doing a lot because
 // it controls a lot of how the output directory is structured.
 /// Convert from ANI to Xcursor.
-pub(crate) fn convert_cursor(input: &Path, package: &Package) -> anyhow::Result<PathBuf> {
+pub(crate) fn convert_cursor(
+    input: &Path,
+    package: &Package,
+    sizes: &[Size],
+) -> anyhow::Result<PathBuf> {
     let ani = Ani::open(input).context("failed to decode ANI file")?;
 
     // To keep everything organized, we'll reuse the original input file name (minus the extension)
@@ -70,22 +80,110 @@ pub(crate) fn convert_cursor(input: &Path, package: &Package) -> anyhow::Result<
     output_dir.push(file_stem);
     fs::create_dir_all(&output_dir).context("failed to create frame output directory")?;
 
-    let frames = extract_frames(ani.frames(), &output_dir).collect::<Vec<_>>();
+    // TODO: Refactor this horrible mess.
 
-    // Save frames to the file system for xcursorgen to reference.
     debug_assert!(output_dir.try_exists().is_ok_and(|exists| exists));
 
-    for frame in &frames {
-        for variant in frame {
+    let extracted = extract_frames(ani.frames(), &output_dir).collect::<Vec<_>>();
+    let rates = ani.rates_or_default();
+    let sequence = ani.sequence_or_default();
+
+    let mut entries = Vec::new();
+
+    // Save frames to the file system for xcursorgen to reference.
+    for (index, frame) in &extracted {
+        let mut target_sizes = sizes.to_owned();
+        let mut largest = None::<(Size, &Extracted)>;
+
+        for (size, variant) in frame {
+            let size = if let Ok(size) = u8::try_from(*size) {
+                Size(size)
+            } else {
+                tracing::warn!("non-standard cursor size {size}; skipping");
+                continue;
+            };
+
             let writer = File::create(&variant.path)?;
             tracing::info!("created file: {:#}", variant.path.display());
             variant.image.write_png(writer)?;
+
+            if let Some(i) = target_sizes.iter().position(|&target| target == size) {
+                _ = target_sizes.remove(i);
+            }
+
+            if largest.is_none() || largest.is_some_and(|(largest_size, _)| size > largest_size) {
+                largest = Some((size, variant));
+            }
+        }
+
+        // loop through remaining targets, using largest image to upscale or downscale.
+
+        if let Some((original_size, original_extracted)) = largest {
+            for target in target_sizes {
+                let original_size = u16::from(original_size.0);
+                let target_size = u16::from(target.0);
+
+                let (original_x, original_y) =
+                    original_extracted.image.cursor_hotspot().unwrap_or((0, 0));
+
+                let scaled_x = original_x / original_size * target_size;
+                let scaled_y = original_y / original_size * target_size;
+
+                let file_name = format!("{index:02}-{target_size}.png");
+                let path = output_dir.join(&file_name);
+                assert!(
+                    !path.try_exists().is_ok_and(|exists| exists),
+                    "scaled frame already exists"
+                );
+
+                let original_image =
+                    image::open(&original_extracted.path).context("failed to open source image")?;
+
+                let scaled_image = original_image.resize_exact(
+                    u32::from(target_size),
+                    u32::from(target_size),
+                    FilterType::Lanczos3,
+                );
+
+                scaled_image.save(&path).context("failed to resize image")?;
+
+                let rate = rates
+                    .get(*index)
+                    .with_context(|| format!("rate not found at index {index}"))?;
+                let duration = u64::from(*rate) * 1000 / 60;
+
+                entries.push(XcursorEntry {
+                    size: u32::from(target_size),
+                    x: scaled_x,
+                    y: scaled_y,
+                    path,
+                    duration,
+                });
+            }
         }
     }
 
+    let frames = extracted
+        .into_iter()
+        .map(|(_, frame)| {
+            frame
+                .into_iter()
+                .map(|(_, extracted)| extracted)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    entries.extend(get_xcursorgen_entries(
+        &sequence,
+        &rates,
+        frames.as_slice(),
+    )?);
+
+    entries.sort_by_key(|entry| entry.size);
+
     // Generate the xcursorgen configuration file
     let config = output_dir.join(format!("{file_stem}.cursor"));
-    create_xcursorgen_configuration(&ani, &frames, &config)
+    create_xcursorgen_configuration(&config, &entries)
         .context("failed to create xcursorgen configuration file")?;
 
     // Generate Xcursor
@@ -98,32 +196,25 @@ pub(crate) fn convert_cursor(input: &Path, package: &Package) -> anyhow::Result<
 fn extract_frames<'a>(
     frames: &'a [Vec<Image>],
     output_dir: &Path,
-) -> impl Iterator<Item = Vec<Extracted<'a>>> {
+) -> impl Iterator<Item = (usize, Vec<(u32, Extracted<'a>)>)> {
     frames.iter().enumerate().map(move |(i, frame)| {
-        frame
+        let images = frame
             .iter()
             .map(move |image| {
                 let width = image.width();
                 let file_name = format!("{i:02}-{width}.png");
                 let path = output_dir.join(&file_name);
-                Extracted { image, path }
+                (width, Extracted { image, path })
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        (i, images)
     })
 }
 
-fn create_xcursorgen_configuration(
-    ani: &Ani,
-    frames: &[Vec<Extracted<'_>>],
-    output: &Path,
-) -> anyhow::Result<()> {
-    let rates = ani.rates_or_default();
-    let sequence = ani.sequence_or_default();
-    let mut entries = get_xcursorgen_entries(&sequence, &rates, frames)?;
-    entries.sort_by_key(|entry| entry.size);
-
+fn create_xcursorgen_configuration(output: &Path, entries: &[XcursorEntry]) -> anyhow::Result<()> {
     let contents = entries
-        .into_iter()
+        .iter()
         .map(|entry| {
             format!(
                 "{size} {x} {y} {file_name} {duration}",
@@ -162,6 +253,8 @@ fn get_xcursorgen_entries(
         for variant in frame {
             // TODO: There is no guarantee that all frames contain the same number of variants,
             // which should result in an error since it affects the animation in an unexpected way.
+            //
+            // ...I think it's safe to remove this todo now... but not sure.
             let size = variant.image.width();
             let (x, y) = variant.image.cursor_hotspot().unwrap_or((0, 0));
             let path = variant.path.clone();
@@ -169,14 +262,14 @@ fn get_xcursorgen_entries(
             let rate = *rates
                 .get(index)
                 .with_context(|| format!("rate not found at index {index}"))?;
-            let duration = u64::from(rate) * 1000 / 60; // ms
+            let duration_ms = u64::from(rate) * 1000 / 60;
 
             entries.push(XcursorEntry {
                 size,
                 x,
                 y,
                 path,
-                duration,
+                duration: duration_ms,
             });
         }
     }

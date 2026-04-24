@@ -1,6 +1,6 @@
 [package]
 name = "ani2xcur"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 
 [dependencies]
@@ -13,6 +13,7 @@ clap-verbosity-flag = { version = "3.0.4", default-features = false, features = 
 ] }
 colored = "3.0.0"
 dirs = "6.0.0"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
 inf = { version = "0.1.0", git = "https://github.com/nicdgonzalez/inf.git" }
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "0.9.11"
