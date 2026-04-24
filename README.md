@@ -103,7 +103,7 @@ Enjoy!
 
 ### Convert individual ANI files
 
-> [!NOTE]\
+> [!TIP]\
 > Do NOT use this command if you are converting a cursor theme that does not
 > have an INF file. Instead, use the `--skip-inf` flag on the `init` command to
 > create a generic manifest that can be manually edited. This way, you can
@@ -137,22 +137,43 @@ ani2xcur convert Default.ani
 Benchmarked using [hyperfine] against similar projects on GitHub solving the
 same problem.
 
-Example command used:
+| Project       | Version |
+| :------------ | :------ |
+| [ani2xcur]    | 0.1.2   |
+| [ani2xcursor] | 1.5.0   |
+| [win2xcur]    | 0.2.0   |
 
 ```bash
 hyperfine \
     --warmup 15 \
-    --setup 'mkdir --parents ./build' \
-    --prepare 'rm -rf ./Cursor.toml build/*' \
-    '[See "Command used" in following table]' \
-    'ani2xcur install --default-init'
+    --setup 'ani2xcur uninstall || rm -r ./build ./Cursor.toml || true' \
+    'ani2xcur init && ani2xcur build' \
+    --conclude 'rm -r ./build ./Cursor.toml' \
+    'ani2xcursor --size 32,48,64,96 --out ./build .' \
+    --conclude 'rm -r ./build' \
+    --prepare 'mkdir --parents ./build' \
+    'win2xcur ./*.ani --output-dir ./build' \
+    --conclude 'rm -r ./build'
 ```
 
-| Project       | Version | Time               | Command used                      |
-| :------------ | :------ | :----------------- | :-------------------------------- |
-| [ani2xcur]    | 0.1.0   | 2.1 ms ± 0.3 ms    | `ani2xcur install --default-init` |
-| [ani2xcursor] | 1.5.0   | 60.4 ms ± 1.6 ms   | `ani2xcursor --out ./build .`     |
-| [win2xcur]    | 0.2.0   | 620.4 ms ± 14.8 ms | `win2xcur ./*.ani -o ./build`     |
+```console
+Benchmark 1: win2xcur ./*.ani --output-dir ./build
+  Time (mean ± σ):     296.1 ms ±   7.1 ms    [User: 1479.6 ms, System: 111.3 ms]
+  Range (min … max):   291.5 ms … 314.3 ms    10 runs
+ 
+Benchmark 2: ani2xcur init && ani2xcur build
+  Time (mean ± σ):      78.2 ms ±   2.1 ms    [User: 572.5 ms, System: 254.3 ms]
+  Range (min … max):    73.8 ms …  82.7 ms    26 runs
+ 
+Benchmark 3: ani2xcursor --size 32,48,64,96 --out ./build .
+  Time (mean ± σ):     284.7 ms ±   8.1 ms    [User: 210.5 ms, System: 65.5 ms]
+  Range (min … max):   273.0 ms … 292.5 ms    10 runs
+ 
+Summary
+  ani2xcur init && ani2xcur build ran
+    3.64 ± 0.14 times faster than ani2xcursor --size 32,48,64,96 --out ./build .
+    3.79 ± 0.14 times faster than win2xcur ./*.ani --output-dir ./build
+```
 
 ## Roadmap
 
