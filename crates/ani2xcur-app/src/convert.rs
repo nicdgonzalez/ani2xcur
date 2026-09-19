@@ -54,50 +54,35 @@ impl AnimationMetadata {
 #[derive(Debug, Clone)]
 struct CursorSource {
     rgba: RgbaImage,
-    size: Size,
+    width: u32,
+    height: u32,
+    // size: Size,
     hotspot_x: u16,
     hotspot_y: u16,
 }
 
 impl CursorSource {
-    fn from_ani_frame(image: &Image) -> Result<Option<Self>, ConvertCursorError> {
-        let width = image
-            .width()
-            .try_into()
-            .map_err(ConvertCursorError::SizeTooLarge)?;
-        let height = image
-            .height()
-            .try_into()
-            .map_err(ConvertCursorError::SizeTooLarge)?;
-        let nominal = u8::max(width, height);
-
-        let Some(size) = Size::checked_new(nominal) else {
-            return Ok(None);
-        };
-
+    fn from_ani_frame(image: &Image) -> Option<Self> {
         let (hotspot_x, hotspot_y) = image.cursor_hotspot().unwrap_or((0, 0));
-        let rgba = RgbaImage::from_raw(
-            u32::from(width),
-            u32::from(height),
-            image.rgba_data().to_vec(),
-        )
-        // TODO: Remove when this no longer panics - Figure out the most useful way to error in
-        // this case - The original PNG/BMP had an invalid width/height for the given image,
-        // which should _not_ have passed ICO validation (external library in our case).
-        //
-        // ---8<---
-        //
-        // This would only panic if `ico::IconDirEntry::decode` (from our `ani` dependency)
-        // gives us the wrong height/width for our image data, causing our width/height
-        // to claim less data than it actually holds.
-        .expect("width/height derived from image buffer so container should always fit");
+        let rgba = RgbaImage::from_raw(image.width(), image.height(), image.rgba_data().to_vec())
+            // TODO: Remove when this no longer panics - Figure out the most useful way to error in
+            // this case - The original PNG/BMP had an invalid width/height for the given image,
+            // which should _not_ have passed ICO validation (external library in our case).
+            //
+            // ---8<---
+            //
+            // This would only panic if `ico::IconDirEntry::decode` (from our `ani` dependency)
+            // gives us the wrong height/width for our image data, causing our width/height
+            // to claim less data than it actually holds.
+            .expect("width/height derived from image buffer so container should always fit");
 
-        Ok(Some(CursorSource {
+        Some(CursorSource {
             rgba,
-            size,
+            width: image.width(),
+            height: image.height(),
             hotspot_x,
             hotspot_y,
-        }))
+        })
     }
 
     fn into_xcursor_image(
@@ -109,7 +94,7 @@ impl CursorSource {
 
         let (hotspot_x, hotspot_y) = self.hotspot_at(size);
 
-        let rgba = if size == self.size {
+        let rgba = if u32::from(size.into_inner()) == self.width.max(self.height) {
             self.rgba
         } else {
             self.resize(size)
@@ -127,7 +112,12 @@ impl CursorSource {
     }
 
     fn hotspot_at(&self, target: Size) -> (u16, u16) {
-        let source_size = u16::from(self.size);
+        // TODO: This was done very quickly -- The idea is to skip checking if the image is the
+        // correct size and instead resize it. I guess `Size` should really only be used when
+        // validating user input. Returning a `Result` here seems odd, so I think the boundary
+        // should be somewhere else. This is just a quick fix before I head out of the house.
+        let source_size = u16::try_from(self.width.max(self.height))
+            .expect("width/height didn't fit within a u16");
         let target_size = u16::from(target);
 
         let hotspot_x = self.hotspot_x * target_size / source_size;
@@ -155,7 +145,7 @@ pub fn xcursor_from_ani(request: ConvertCursorRequest) -> Result<Xcursor, Conver
         let mut sources = Vec::new();
 
         for image in frame {
-            let Some(source) = CursorSource::from_ani_frame(image)? else {
+            let Some(source) = CursorSource::from_ani_frame(image) else {
                 let nominal = u64::max(image.width().into(), image.height().into());
                 warn!("skipping image with non-standard size: {nominal}");
                 continue;
@@ -164,7 +154,9 @@ pub fn xcursor_from_ani(request: ConvertCursorRequest) -> Result<Xcursor, Conver
             sources.push(source);
         }
 
-        let largest = sources.into_iter().max_by_key(|source| source.size);
+        let largest = sources
+            .into_iter()
+            .max_by_key(|source| source.width.max(source.height));
 
         if let Some(source) = largest {
             for target in sizes {

@@ -7,7 +7,7 @@ use anyhow::Context as _;
 use colored::Colorize as _;
 
 use crate::commands::{Context, Run};
-use crate::ops::convert::{ConvertCursorRequest, convert_cursor};
+use ani2xcur_app::convert::{ConvertCursorRequest, xcursor_from_ani};
 
 #[derive(Debug, Default, clap::Args)]
 pub struct Convert {
@@ -32,10 +32,10 @@ impl Run for Convert {
         let ani = Ani::open(input).context("failed to decode ANI file")?;
 
         let request = ConvertCursorRequest {
-            ani: &ani,
-            sizes: &self.sizes,
+            ani,
+            sizes: self.sizes,
         };
-        let xcursor = convert_cursor(request).context("failed to convert cursor")?;
+        let xcursor = xcursor_from_ani(request).context("failed to convert cursor")?;
 
         xcursor.save(&output).context("failed to save Xcursor")?;
 

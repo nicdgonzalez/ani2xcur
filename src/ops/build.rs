@@ -3,13 +3,12 @@ use std::path::PathBuf;
 use std::thread;
 
 use ani::Ani;
+use ani2xcur_app::convert::{ConvertCursorRequest, xcursor_from_ani};
 use ani2xcur_core::cursor::Cursor;
 use ani2xcur_core::package::Package;
 use ani2xcur_core::size::Size;
 use anyhow::{Context, bail};
 use tracing::{error, error_span};
-
-use crate::ops::convert::{ConvertCursorRequest, convert_cursor};
 
 pub struct BuildPackageRequest {
     pub path: PathBuf,
@@ -85,8 +84,11 @@ fn build_package_handler(cursor: &Cursor, package: &Package, sizes: &[Size]) -> 
     let input = package.path().join(cursor.path());
     let ani = Ani::open(&input).context("failed to decode ANI file")?;
 
-    let request = ConvertCursorRequest { ani: &ani, sizes };
-    let xcursor = convert_cursor(request).context("failed to convert cursor")?;
+    let request = ConvertCursorRequest {
+        ani,
+        sizes: sizes.to_vec(),
+    };
+    let xcursor = xcursor_from_ani(request).context("failed to convert cursor")?;
 
     let cursors = package.theme().cursors();
     let output = cursors.join(cursor.kind().to_string());
