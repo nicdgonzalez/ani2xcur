@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::str::FromStr;
@@ -116,7 +116,12 @@ impl Manifest {
     where
         P: AsRef<Path>,
     {
-        File::open(path.as_ref()).and_then(|f| self.write(f))
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path.as_ref())
+            .and_then(|f| self.write(f))
     }
 
     /// Target name for the cursor theme.
