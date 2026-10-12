@@ -103,6 +103,7 @@ impl Xcursor {
         Self::try_from(buffer)
     }
 
+    #[expect(missing_docs, clippy::missing_panics_doc, clippy::missing_errors_doc)]
     pub fn write<W>(&self, mut writer: W) -> io::Result<()>
     where
         W: Write,
@@ -151,6 +152,7 @@ impl Xcursor {
         Ok(())
     }
 
+    #[expect(missing_docs, clippy::missing_errors_doc)]
     pub fn save<P>(&self, path: P) -> io::Result<()>
     where
         P: AsRef<Path>,

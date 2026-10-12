@@ -27,6 +27,67 @@ pub enum ConvertCursorError {
     InvalidFrameIndex { index: usize },
 }
 
+/// Converts a cursor from ANI to Xcursor format.
+///
+/// # Errors
+///
+/// todo
+pub fn xcursor_from_ani(request: ConvertCursorRequest) -> Result<Xcursor, ConvertCursorError> {
+    let ani = request.ani;
+    let metadata = AnimationMetadata::from_ani(&ani);
+
+    // Contains one of each of the available animation frames.
+    let mut frames = Vec::<xcur::Image>::new();
+
+    for (frame, delay) in ani.frames().iter().zip(metadata.delays) {
+        let sizes = request.sizes.clone();
+
+        let sources = frame
+            .iter()
+            .map(CursorSource::from_ani_frame)
+            .collect::<Vec<_>>();
+
+        let largest = sources
+            .into_iter()
+            .max_by_key(|source| source.width.max(source.height));
+
+        if let Some(source) = largest {
+            for target in sizes {
+                let xcursor = source.clone().into_xcursor_image(target, delay)?;
+                frames.push(xcursor);
+            }
+        }
+    }
+
+    frames.sort_by_key(|image| u16::max(image.width(), image.height()));
+    debug_assert!(frames.len().is_multiple_of(request.sizes.len()));
+
+    // Contains the actual frames needed for the animation.
+    let capacity = metadata.sequence.len() * request.sizes.len();
+    let mut images = Vec::<xcur::Image>::with_capacity(capacity);
+
+    let frames_per_size = frames.len() / request.sizes.len();
+
+    for size_idx in 0..request.sizes.len() {
+        let offset = size_idx * frames_per_size;
+
+        for sequence_idx in &metadata.sequence {
+            let frame_idx = sequence_idx + offset;
+
+            let frame = frames
+                .get(frame_idx)
+                .cloned()
+                .ok_or(ConvertCursorError::InvalidFrameIndex { index: frame_idx })?;
+
+            images.push(frame);
+        }
+    }
+
+    let comments = vec![]; // Comments are ignored.
+
+    Ok(Xcursor::new(images, comments))
+}
+
 struct AnimationMetadata {
     delays: Vec<Duration>,
     sequence: Vec<usize>,
@@ -128,67 +189,6 @@ impl CursorSource {
     }
 }
 
-/// Converts a cursor from ANI to Xcursor format.
-///
-/// # Errors
-///
-/// Returns an error if:
-pub fn xcursor_from_ani(request: ConvertCursorRequest) -> Result<Xcursor, ConvertCursorError> {
-    let ani = request.ani;
-    let metadata = AnimationMetadata::from_ani(&ani);
-
-    // Contains one of each of the available animation frames.
-    let mut frames = Vec::<xcur::Image>::new();
-
-    for (frame, delay) in ani.frames().iter().zip(metadata.delays) {
-        let sizes = request.sizes.clone();
-
-        let sources = frame
-            .iter()
-            .map(CursorSource::from_ani_frame)
-            .collect::<Vec<_>>();
-
-        let largest = sources
-            .into_iter()
-            .max_by_key(|source| source.width.max(source.height));
-
-        if let Some(source) = largest {
-            for target in sizes {
-                let xcursor = source.clone().into_xcursor_image(target, delay)?;
-                frames.push(xcursor);
-            }
-        }
-    }
-
-    frames.sort_by_key(|image| u16::max(image.width(), image.height()));
-    debug_assert!(frames.len().is_multiple_of(request.sizes.len()));
-
-    // Contains the actual frames needed for the animation.
-    let capacity = metadata.sequence.len() * request.sizes.len();
-    let mut images = Vec::<xcur::Image>::with_capacity(capacity);
-
-    let frames_per_size = frames.len() / request.sizes.len();
-
-    for size_idx in 0..request.sizes.len() {
-        let offset = size_idx * frames_per_size;
-
-        for sequence_idx in &metadata.sequence {
-            let frame_idx = sequence_idx + offset;
-
-            let frame = frames
-                .get(frame_idx)
-                .cloned()
-                .ok_or(ConvertCursorError::InvalidFrameIndex { index: frame_idx })?;
-
-            images.push(frame);
-        }
-    }
-
-    let comments = vec![]; // Comments are ignored.
-
-    Ok(Xcursor::new(images, comments))
-}
-
 /// Shifts the bytes from RGBA to ARGB format.
 fn rgba_to_argb(bytes: &[u8]) -> impl Iterator<Item = u32> {
     let (chunks, remainder) = bytes.as_chunks::<4>();
@@ -197,9 +197,4 @@ fn rgba_to_argb(bytes: &[u8]) -> impl Iterator<Item = u32> {
     chunks.iter().map(|&[r, g, b, a]| {
         (u32::from(a) << 24) | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

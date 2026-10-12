@@ -4,7 +4,7 @@ use anyhow::Context as _;
 use colored::Colorize as _;
 
 use crate::commands::prelude::*;
-use crate::ops::clean::{CleanRequest, clean_artifacts};
+use ani2xcur_app::clean::{CleanRequest, clean_artifacts};
 
 #[derive(Debug, clap::Args)]
 pub struct Clean;

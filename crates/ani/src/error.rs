@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use std::{error, fmt, io};
 
 #[derive(Debug)]

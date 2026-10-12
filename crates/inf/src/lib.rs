@@ -34,6 +34,7 @@ pub struct Inf {
 }
 
 impl Inf {
+    #[expect(missing_docs, clippy::missing_errors_doc)]
     pub fn open<P>(path: P) -> Result<Self, ParseError>
     where
         P: AsRef<Path>,
@@ -43,6 +44,7 @@ impl Inf {
             .and_then(Self::from_reader)
     }
 
+    #[expect(missing_docs, clippy::missing_errors_doc)]
     pub fn from_reader<R>(mut reader: R) -> Result<Self, ParseError>
     where
         R: Read,
@@ -55,6 +57,7 @@ impl Inf {
         Self::try_from(buffer.as_slice())
     }
 
+    #[expect(missing_docs, clippy::missing_errors_doc)]
     pub fn from_bytes(buffer: &[u8]) -> Result<Self, ParseError> {
         Self::try_from(buffer)
     }

@@ -5,7 +5,7 @@ use anyhow::Context as _;
 use colored::Colorize as _;
 
 use crate::commands::prelude::*;
-use crate::ops::install::{InstallPackageError, InstallPackageRequest, install_package};
+use ani2xcur_app::install::{InstallThemeError, InstallThemeRequest, install_theme};
 
 #[derive(Debug, Default, clap::Args)]
 pub struct Install {
@@ -16,12 +16,12 @@ pub struct Install {
 
 impl Run for Install {
     fn run(self, ctx: Context) -> anyhow::Result<()> {
-        let request = InstallPackageRequest {
+        let request = InstallThemeRequest {
             input: ctx.current_dir,
             default_init: self.default_init,
         };
 
-        match install_package(request) {
+        match install_theme(request) {
             Ok(theme) => {
                 writeln!(
                     io::stderr(),
@@ -32,7 +32,7 @@ impl Run for Install {
 
                 Ok(())
             }
-            Err(InstallPackageError::AlreadyInstalled { theme }) => {
+            Err(InstallThemeError::AlreadyInstalled { theme }) => {
                 writeln!(
                     io::stderr(),
                     "{}",

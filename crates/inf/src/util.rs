@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::section::{Entry, Section, Value};
 
+#[expect(missing_docs, clippy::missing_errors_doc)]
 pub fn expand_vars(value: &str, strings: &Section) -> Result<String, ExpandVarsError> {
     let mut result = String::with_capacity(value.len());
     let mut chars = value.chars().peekable();

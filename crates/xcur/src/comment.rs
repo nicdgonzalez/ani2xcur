@@ -46,6 +46,7 @@ pub struct Comment {
 }
 
 impl Comment {
+    #[expect(missing_docs, clippy::missing_errors_doc, clippy::missing_panics_doc)]
     pub fn new(kind: CommentKind, buffer: String) -> Result<Self, ParseError> {
         let max_buffer_length = usize::try_from(u32::MAX).expect("u32 overflowed usize");
 
@@ -87,6 +88,7 @@ impl Comment {
         Comment { kind, buffer }
     }
 
+    #[expect(missing_docs, clippy::missing_errors_doc, clippy::missing_panics_doc)]
     pub fn write<W>(&self, mut writer: W) -> io::Result<()>
     where
         W: Write,

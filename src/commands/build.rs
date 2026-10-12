@@ -5,7 +5,7 @@ use anyhow::Context as _;
 use colored::Colorize as _;
 
 use crate::commands::{Context, Run};
-use crate::ops::build::{BuildPackageRequest, build_package};
+use ani2xcur_app::build::{BuildPackageRequest, build_package};
 
 #[derive(Debug, Default, clap::Args)]
 pub struct Build {

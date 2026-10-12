@@ -28,7 +28,7 @@ pub use ico::IconImage as Image;
 use ico::{IconDir, IconDirEntry};
 
 use crate::builder::AniBuilder;
-use crate::error::ParseError;
+pub use crate::error::ParseError;
 pub use crate::parser::Parser;
 
 bitflags! {

@@ -274,6 +274,11 @@ impl Cursor {
         self.kind
     }
 
+    #[must_use]
+    pub fn name(&self) -> String {
+        self.kind.to_string()
+    }
+
     /// Alternative names for compatibility with different programs.
     #[must_use]
     pub fn aliases(&self) -> &[String] {

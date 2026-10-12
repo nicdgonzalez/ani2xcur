@@ -18,6 +18,7 @@ pub struct Image {
 }
 
 impl Image {
+    #[expect(missing_docs, clippy::missing_errors_doc)]
     pub fn new(
         width: u16,
         height: u16,
@@ -121,6 +122,7 @@ impl Image {
         })
     }
 
+    #[expect(missing_docs, clippy::missing_errors_doc, clippy::missing_panics_doc)]
     pub fn write<W>(&self, mut writer: W) -> io::Result<()>
     where
         W: Write,
