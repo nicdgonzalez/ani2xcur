@@ -1,7 +1,7 @@
 # ani2xcur
 
 > [!NOTE]\
-> This project recieved a full rewrite and was renamed from `ani-to-xcursor` to
+> This project received a full rewrite and was renamed from `ani-to-xcursor` to
 > `ani2xcur` on March 10, 2026.
 
 A command-line tool for installing Windows animated cursor schemes on Unix-like
@@ -33,7 +33,7 @@ and subcommands, optimized for speed and correctness. See
 
 | Requirement | Version | Description                                  |
 | :---------- | :------ | :------------------------------------------- |
-| cargo       | 1.94.0  | Build and install the command-line interface |
+| cargo       | 1.99.0  | Build and install the command-line interface |
 
 Install from GitHub using `cargo`:
 
