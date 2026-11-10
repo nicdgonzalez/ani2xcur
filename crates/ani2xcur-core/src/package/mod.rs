@@ -1,11 +1,9 @@
 use std::path::{Path, PathBuf};
-use std::{fs, io};
-
-use tracing::info;
-
-use crate::manifest::{Manifest, ManifestError, TomlManifest};
+use std::io;
 
 pub use theme::*;
+
+use crate::manifest::{Manifest, ManifestError};
 
 mod theme;
 
@@ -63,18 +61,5 @@ impl Package {
     /// - [`Manifest::open`] for error cases.
     pub fn manifest(&self) -> Result<Manifest, ManifestError> {
         Manifest::open(self.manifest_path())
-    }
-
-    #[deprecated]
-    #[expect(missing_docs, clippy::missing_errors_doc, clippy::missing_panics_doc)]
-    pub fn save_manifest(&self, manifest: Manifest) -> io::Result<()> {
-        let value = TomlManifest::from(manifest);
-        let contents = toml::to_string_pretty(&value).expect("manifest should be serializable");
-
-        let manifest_path = self.manifest_path();
-        let result = fs::write(&manifest_path, contents);
-        info!("created file: {}", manifest_path.display());
-
-        result
     }
 }

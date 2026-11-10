@@ -1,4 +1,3 @@
-#![doc = include_str!("../README.md")]
 #![warn(
     clippy::correctness,
     clippy::suspicious,
@@ -18,7 +17,6 @@ use colored::Colorize as _;
 use commands::Parser;
 
 mod commands;
-mod ops;
 
 fn main() -> ExitCode {
     try_main().unwrap_or_else(|err| {
