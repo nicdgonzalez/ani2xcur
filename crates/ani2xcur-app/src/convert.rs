@@ -192,7 +192,7 @@ impl CursorSource {
 /// Shifts the bytes from RGBA to ARGB format.
 fn rgba_to_argb(bytes: &[u8]) -> impl Iterator<Item = u32> {
     let (chunks, remainder) = bytes.as_chunks::<4>();
-    debug_assert!(remainder.is_empty());
+    debug_assert_eq!(remainder, [] as [u8; 0]);
 
     chunks.iter().map(|&[r, g, b, a]| {
         (u32::from(a) << 24) | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)

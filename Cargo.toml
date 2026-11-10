@@ -2,6 +2,9 @@
 members = ["crates/*"]
 resolver = "3"
 
+[workspace.dependencies]
+inf = { version = "0.1.0", git = "https://github.com/nicdgonzalez/inf.git", branch = "main" }
+
 [package]
 name = "ani2xcur"
 version = "0.1.6"
@@ -12,7 +15,6 @@ rust-version = "1.99"
 ani = { path = "./crates/ani" }
 ani2xcur-core = { path = "./crates/ani2xcur-core" }
 ani2xcur-app = { version = "0.1.0", path = "crates/ani2xcur-app" }
-inf = { path = "./crates/inf" }
 xcur = { path = "./crates/xcur" }
 
 anyhow = "1.0.100"

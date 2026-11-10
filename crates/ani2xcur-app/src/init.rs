@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::{io, slice};
 
 use ani2xcur_core::{CURSORS_DEFAULT, Cursor, Manifest, Package, THEME_DEFAULT};
-use inf::util::expand_vars;
 use inf::{AddRegistryEntry, Entry, Inf, Section, Value};
 
 /// Request to initialize a package.
@@ -30,7 +29,7 @@ pub enum InitializePackageError {
 
     /// Failed to open the INF file.
     #[error("failed to open INF file")]
-    OpenInf(#[source] inf::ParseError),
+    OpenInf(#[source] inf::InfError),
 
     /// Failed to extract cursor information from the INF file.
     #[error("failed to parse INF file")]
@@ -132,7 +131,7 @@ pub enum ParseInfError {
 
     /// Failed to expand variable.
     #[error("failed to expand variable")]
-    ExpandVars(#[source] inf::util::ExpandVarsError),
+    ExpandVars(#[source] inf::ExpandError),
 }
 
 /// Extracts relevant cursor scheme information from `inf`.
@@ -143,11 +142,11 @@ fn parse_inf(inf: &Inf) -> Result<(Option<String>, Vec<Cursor>), ParseInfError> 
     let theme = if entry.entry_name.is_empty() {
         None
     } else {
-        let theme = expand_vars(entry.entry_name, &strings).map_err(ParseInfError::ExpandVars)?;
+        let theme = inf::expand(entry.entry_name, strings).map_err(ParseInfError::ExpandVars)?;
         if theme.is_empty() { None } else { Some(theme) }
     };
 
-    let cursors = split_value_into_path_bufs(entry.value, &strings)?
+    let cursors = split_value_into_path_bufs(entry.value, strings)?
         .into_iter()
         .zip(CURSORS_DEFAULT.iter())
         .filter_map(|(path, cursor)| (!path.is_empty()).then(|| cursor.clone().with_path(path)))
@@ -160,7 +159,7 @@ fn parse_inf(inf: &Inf) -> Result<(Option<String>, Vec<Cursor>), ParseInfError> 
 fn get_cursor_scheme_entry(inf: &Inf) -> Result<AddRegistryEntry<'_>, ParseInfError> {
     // `DefaultInstall` is the main entry point to a setup information (INF) file.
     let default_install = inf
-        .get("DefaultInstall")
+        .get_section("DefaultInstall")
         .ok_or(ParseInfError::DefaultInstallNotFound)?;
 
     // The `AddReg` directive lists the names of sections that modify the Windows registry.
@@ -172,13 +171,13 @@ fn get_cursor_scheme_entry(inf: &Inf) -> Result<AddRegistryEntry<'_>, ParseInfEr
         .ok_or(ParseInfError::AddRegDirectiveNotFound)?;
 
     for section_name in section_names {
-        let Some(section) = inf.get(section_name) else {
+        let Some(section) = inf.get_section(section_name) else {
             // No need to validate the INF file; if `AddReg` named a section that does not exist,
             // we can just skip it.
             continue;
         };
 
-        for entry in section.as_add_registry_section().entries() {
+        for entry in section.as_add_registry_section() {
             let entry = entry.map_err(ParseInfError::InvalidEntry)?;
 
             if is_cursor_scheme_entry(entry) {
@@ -214,7 +213,7 @@ fn split_value_into_path_bufs(
             let path = s
                 .split('\\')
                 .skip(2)
-                .map(|v| inf::util::expand_vars(v, strings).map_err(ParseInfError::ExpandVars))
+                .map(|v| inf::expand(v, strings).map_err(ParseInfError::ExpandVars))
                 .collect::<Result<Vec<_>, ParseInfError>>()?
                 .into_iter()
                 .collect::<PathBuf>();
